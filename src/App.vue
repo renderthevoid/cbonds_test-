@@ -21,7 +21,13 @@
                 <div class="fld">
                   <input type="text" class="input" v-model="newItem[field]" />
                 </div>
-                <div class="clear"></div>
+                <div
+                  class="clear"
+                  :style="{ color: 'red' }"
+                  v-if="newItem[field].length && !testString(newItem[field]) && !newItem.name"
+                >
+                  Только числовые
+                </div>
               </template>
             </div>
             <div class="clear"></div>
@@ -38,9 +44,12 @@
               :no_hidden_empty_cols="true"
             >
               <template v-slot:field="props">
-                <div v-if="props.field === 'action'">
-                  <a href="#" @click="removeRow(props.row.id)">Удалить</a>
-                </div>
+                  <div v-if="props.field === 'action'">
+                    <a href="#" @click="removeRow(props.row.id)" v-if="props.row.name !== 'Сумма'">
+                      Удалить
+                    </a>
+                    <a href="#" v-else></a>
+                  </div>
               </template>
             </app-table-new>
           </div>
@@ -70,10 +79,9 @@ export default {
         param1: "Параметр 1",
         param2: "Параметр 2",
         param3: "Параметр 3",
-        summary: "Сумма",
         action: "Действие",
       },
-      tableFields: ["name", "param1", "param2", "param3", "summary", "action"],
+      tableFields: ["name", "param1", "param2", "param3", "action"],
       tableData: [],
       newItem: {
         id: 0,
@@ -82,8 +90,12 @@ export default {
         param2: "",
         param3: "",
       },
-      regexp: /^\d+(?:[.,]\d{1,})?$/,
+      // regexp: /^\d+(?:[.,]\d{1,})?$/,
+      // regexp: /^(0|[1-9]\d*)([.,]\d+)?/,
+      regexp: /^[+-]?(?:\d+\.?\d*|\.\d+)$/,
       codeName: " asterisks",
+      sum: 0,
+      array: [],
     };
   },
   watch: {
@@ -107,27 +119,56 @@ export default {
         .filter((item) => typeof item === "string")
         .slice(1);
     },
-    summary() {
-      return this.paramsArray.reduce((acc, curr) => Number(acc) + Number(curr.includes(",") ? curr.replace(",", ".") : curr), 0).toFixed(2);
-    },
     isInputsValid() {
       return this.paramsArray.every((item) => item.length && this.regexp.test(item));
     },
+    sumParam1() {
+      return this.tableData.reduce((acc, curr) => acc + parseFloat(curr.param1), 0).toFixed(2);
+    },
+    sumParam2() {
+      return this.tableData.reduce((acc, curr) => acc + parseFloat(curr.param2), 0).toFixed(2);
+    },
+    sumParam3() {
+      return this.tableData.reduce((acc, curr) => acc + parseFloat(curr.param3), 0).toFixed(2);
+    },
+    sumArray() {
+      return {
+        id: 100,
+        name: "Сумма",
+        param1: this.sumParam1,
+        param2: !this.auth ? this.sumParam2 + this.codeName : this.sumParam2,
+        param3: !this.auth ? this.sumParam3 + this.codeName : this.sumParam3,
+        action: "-"
+      };
+    },
+    sumItemIndex() {
+      return this.tableData.length;
+    },
   },
   methods: {
+    testString(text) {
+      return this.regexp.test(text);
+    },
     appendRow() {
       this.newItem.id = 1;
       if (this.tableData.length) {
         this.newItem.id =
           this.tableData.reduce((acc, curr) => (acc.id > curr.id ? acc : curr)).id + 1;
       }
-      if (this.isInputsValid) {
+      if (this.isInputsValid ) {
+        this.tableData.pop();
+
         this.tableData.push({
           ...this.newItem,
-          summary: this.summary,
-          param2: !this.auth ? `${this.newItem.param2} ${this.codeName}` : this.newItem.param2,
-          param3: !this.auth ? `${this.newItem.param3} ${this.codeName}` : this.newItem.param3,
+          param1: Number(this.newItem.param1).toFixed(2),
+          param2: !this.auth
+            ? `${Number(this.newItem.param2).toFixed(2)} ${this.codeName}`
+            : Number(this.newItem.param2).toFixed(2),
+          param3: !this.auth
+            ? `${Number(this.newItem.param3).toFixed(2)} ${this.codeName}`
+            : Number(this.newItem.param3).toFixed(2),
         });
+
         this.newItem = {
           id: 0,
           name: "",
@@ -135,10 +176,17 @@ export default {
           param2: "",
           param3: "",
         };
+
+        this.tableData.push(this.sumArray);
       }
     },
     removeRow(id) {
       this.tableData = this.tableData.filter((item) => item.id !== id);
+      this.tableData.pop();
+      this.tableData.push(this.sumArray);
+      if (this.tableData.length === 1) {
+        this.tableData = []
+      }
     },
   },
 };
