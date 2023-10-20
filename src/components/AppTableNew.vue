@@ -777,7 +777,6 @@ export default {
   name: "AppTableNew",
   components: {},
   props: {
-    auth: { default: false, type: Boolean },
     table_name: { default: "", type: String }, // класс таблицы
     limit: { default: 0, type: Number }, // класс таблицы,
     table_class: { default: "", type: String }, // класс таблицы

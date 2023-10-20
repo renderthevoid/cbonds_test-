@@ -14,10 +14,9 @@
               </div>
             </div>
           </div>
-          <!-- <input-box :fields="tableFields" :labels="labels"></input-box> -->
           <div class="infoUser">
             <div class="field" v-for="field in tableFields" :key="field">
-              <template v-if="field !== 'action'">
+              <template v-if="field !== 'action' && field !== 'summary'">
                 <div class="lbl indent">{{ !!labels[field] ? labels[field] : field }}</div>
                 <div class="fld">
                   <input type="text" class="input" v-model="newItem[field]" />
@@ -37,7 +36,6 @@
               :fields="tableFields"
               :fields_labels="labels"
               :no_hidden_empty_cols="true"
-              :auth="auth"
             >
               <template v-slot:field="props">
                 <div v-if="props.field === 'action'">
@@ -56,7 +54,6 @@
 <style src="./style.css"></style>
 <script>
 import AppTableNew from "./components/AppTableNew.vue";
-// import InputBox from "./components/InputBox.vue";
 
 export default {
   name: "App",
@@ -73,9 +70,10 @@ export default {
         param1: "Параметр 1",
         param2: "Параметр 2",
         param3: "Параметр 3",
+        summary: "Сумма",
         action: "Действие",
       },
-      tableFields: ["name", "param1", "param2", "param3", "action"],
+      tableFields: ["name", "param1", "param2", "param3", "summary", "action"],
       tableData: [],
       newItem: {
         id: 0,
@@ -84,7 +82,7 @@ export default {
         param2: "",
         param3: "",
       },
-      regexp: /^\d+$/,
+      regexp: /^\d+(?:[.,]\d{1,})?$/,
       codeName: " asterisks",
     };
   },
@@ -97,35 +95,36 @@ export default {
         });
       } else {
         this.tableData.map((obj) => {
-          obj.param2 = this.asterisksToggler(obj.param2, this.codeName);
-          obj.param3 = this.asterisksToggler(obj.param3, this.codeName);
+          obj.param2 = `${obj.param2} ${this.codeName}`;
+          obj.param3 = `${obj.param3} ${this.codeName}`;
         });
       }
     },
   },
   computed: {
-    arrayOfParams() {
+    paramsArray() {
       return Object.values(this.newItem)
         .filter((item) => typeof item === "string")
         .slice(1);
     },
-    isValid() {
-      return this.arrayOfParams.every((item) => item.length && this.regexp.test(item));
+    summary() {
+      return this.paramsArray.reduce((acc, curr) => Number(acc) + Number(curr.includes(",") ? curr.replace(",", ".") : curr), 0).toFixed(2);
+    },
+    isInputsValid() {
+      return this.paramsArray.every((item) => item.length && this.regexp.test(item));
     },
   },
   methods: {
-    asterisksToggler(objItem, name) {
-      return `${objItem} ${name}`;
-    },
     appendRow() {
       this.newItem.id = 1;
       if (this.tableData.length) {
         this.newItem.id =
           this.tableData.reduce((acc, curr) => (acc.id > curr.id ? acc : curr)).id + 1;
       }
-      if (this.isValid) {
+      if (this.isInputsValid) {
         this.tableData.push({
           ...this.newItem,
+          summary: this.summary,
           param2: !this.auth ? `${this.newItem.param2} ${this.codeName}` : this.newItem.param2,
           param3: !this.auth ? `${this.newItem.param3} ${this.codeName}` : this.newItem.param3,
         });
